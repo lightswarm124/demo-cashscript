@@ -1,0 +1,21 @@
+pragma cashscript ^0.9.0;
+
+contract IntrospectionCovenant(bytes20 funder) {
+  function spend() {
+    require(tx.outputs[0].lockingBytecode == tx.inputs[this.activeInputIndex].lockingBytecode);
+
+    int minerFee = 1000;
+    int sendAmount = 69420;
+    int currentValue = tx.inputs[this.activeInputIndex].value;
+    int changeValue = currentValue - sendAmount - minerFee;
+    
+    require(tx.outputs[0].value == sendAmount);
+    require(tx.outputs[1].lockingBytecode == tx.inputs[this.activeInputIndex].lockingBytecode);
+    require(tx.outputs[1].value == changeValue);
+  }
+
+  function reclaim(pubkey pk, sig s) {
+    require(hash160(pk) == funder);
+    require(checkSig(s, pk));
+  }
+}
