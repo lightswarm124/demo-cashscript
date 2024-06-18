@@ -5,12 +5,6 @@ import {
   Network, 
   SignatureTemplate,
 } from 'cashscript';
-import { 
-  stringify,
-  encodeTransactionOutput,
-  useLocktime
-} from '@bitauth/libauth';
-import { calculateBytesize } from "@cashscript/utils"
 import { compileFile } from 'cashc';
 import { 
   aliceAddress,
@@ -19,7 +13,8 @@ import {
   alicePriv, 
   bobAddress,
   bobTokenAddress, 
-  bobPriv 
+  bobPriv, 
+  alicePub
 } from "./common.js";
 import { URL } from 'url';
 import {
@@ -30,14 +25,22 @@ import {
 import slpMdm from 'slp-mdm'
 
 async function run() {
-  // const artifact = compileFile(new URL('IntrospectionCovenant.cash', import.meta.url));
   const artifact = compileFile(new URL('p2pkh.cash', import.meta.url));
-  // console.log(artifact)
+  const demoArtifact = compileFile(new URL('IntrospectionCovenant.cash', import.meta.url));
 
   const provider = new ElectrumNetworkProvider(Network.CHIPNET);
 
   const contract = new Contract(
     artifact,
+    [alicePkh], 
+    { 
+      provider: provider,
+      addressType: 'p2sh32' 
+    }
+  );
+
+  const demoContract = new Contract(
+    demoArtifact,
     [alicePkh], 
     { 
       provider: provider,
@@ -53,40 +56,80 @@ async function run() {
   const txFee = Math.floor(satoshisPerByte * txByteCount)
   // console.log(txFee)
   
-  // console.log('alice address:', aliceAddress);
-  // console.log('contract address:', contract.address);
-  // console.log('contract opcount:', contract.opcount);
-  // console.log('contract bytesize:', contract.bytesize);
-  
-  // const aliceBalance = await provider.getUtxos(bobAddress).then(async res => res.reduce((acc, utxo) => acc + utxo.satoshis, 0n))
-  // console.log('bob balance:', aliceBalance)
-  // console.log('contract balance:', await contract.getBalance());
-
-  const contractUtxos = await contract.getUtxos();
-  // console.log(contractUtxos)
-
   const repeatTransaction = 10;
 
   for (let i = 0; i < repeatTransaction; i++) {
     try {
       let totalFees = 0;
 
-      const chunks = sendBuffer;
+      // const chunks = sendBuffer;
       // console.log(chunks)
+
+      const contractUtxos = await demoContract.getUtxos();
+      // // console.log(contractUtxos)
+      const contractBalance = await demoContract.getBalance();
+      // // console.log(contractBalance)
+
+      const { withToken: tokenUTXO, withoutToken: regularUTXO } = separateUtxos(contractUtxos);
+      const { collectedObjects: contractSpendUTXOs, totalSatoshis: satoshiAmount } = collectUTXOs(regularUTXO, 70000)
+      const { collectedObjects: contractTokenUTXOs, totalSatoshis: tokenSatoshi } = collectUTXOs(tokenUTXO, 500)
+      // console.log(contractSpendUTXOs)
+      // console.log(contractTokenUTXOs)
+
+      const unlockableContractUtxos = contractSpendUTXOs.map(item => ({
+        ...item,
+        unlocker: demoContract.unlock.spend(
+          satoshiAmount
+        ),
+        // unlocker: demoContract.unlock.reclaim(
+        //   alicePub, new SignatureTemplate(alicePriv)
+        // )
+      }));
+
+      const unlockableContractTokenUtxos = contractTokenUTXOs.map(item => ({
+        ...item,
+        unlocker: demoContract.unlock.reclaim(
+          // contractBalance - 155n
+          alicePub, new SignatureTemplate(alicePriv)
+        )
+      }));
+
+      const contractTxOutputs = [
+        { 
+          to: demoContract.address, 
+          amount: satoshiAmount, 
+          // token: {amount: tokenUTXO[0].amount, category: tokenUTXO[0].token.category} 
+        },
+        // { 
+        //   to: demoContract.tokenAddress, 
+        //   amount: tokenUTXO[0].satoshis, 
+        //   token: {amount: tokenUTXO[0].amount, category: tokenUTXO[0].token.category} 
+        // },
+        // { to: demoContract.address, amount: satoshiAmount - 524n },
+        // { to: aliceAddress, amount: sendAmount }
+      ];
 
       const transactionBuilder = new TransactionBuilder({ provider });
 
+      transactionBuilder
+        .addInputs(unlockableContractUtxos)
+        // .addInputs(unlockableContractTokenUtxos)
+        .addOutputs(contractTxOutputs)
+
+      // console.log(transactionBuilder);
       // Post "Hello World!" to memo.cash 
       // transactionBuilder.addOpReturnOutput(chunks);
       // transactionBuilder.addOpReturnOutput(['0x6d02', `Test Tx Chain: ${i+1}`]);
       // console.log(transactionBuilder.outputs[0]);
-      const opReturnSize = transactionBuilder.outputs[0] ? (transactionBuilder.outputs[0].to).byteLength : 0;
+      // const opReturnSize = transactionBuilder.outputs[0] ? (transactionBuilder.outputs[0].to).byteLength : 0;
       // console.log(opReturnSize);
       // console.log(transactionBuilder)
 
-      totalFees += opReturnSize;
+      // totalFees += opReturnSize;
 
-      // Fetch UTXOs
+      // -------------------------------------------------
+
+      // // Fetch UTXOs
       const aliceUtxos = await provider.getUtxos(aliceAddress);
 
       // Separate UTXOs into those with and without tokens
@@ -95,14 +138,17 @@ async function run() {
         withoutToken 
       } = separateUtxos(aliceUtxos);
 
-      // console.log(withToken[0].token)
+      // console.log(withToken)
 
       // Collect UTXOs to meet the required amount
-      const { collectedObjects, totalSatoshis } = collectUTXOs(withoutToken, BigInt(300000));
+      const { collectedObjects, totalSatoshis } = collectUTXOs(withoutToken, BigInt(900000));
 
       // Calculate the send amount
       const sendAmount = BigInt(Math.floor((
-        Number(totalSatoshis) - txFee 
+        Number(totalSatoshis) 
+          // - txFee 
+          - 680  
+          // + 31 
           // - opReturnSize
         ) / 3));
       // console.log(sendAmount)
@@ -110,7 +156,7 @@ async function run() {
       // Prepare transaction outputs
       const txOutputs = [
         { 
-          to: aliceTokenAddress, 
+          to: aliceAddress, 
           amount: sendAmount, 
           // token: {amount: 5n, category: withToken[0].token.category} 
         },
@@ -127,35 +173,17 @@ async function run() {
         unlocker: aliceTemplate.unlockP2PKH()
       }));
       
-      const inputSize = calculateTotalInputFees(unlockableUtxos);
-      const outputSize = calculateTotalOutputFees(txOutputs);
-
-      totalFees += inputSize + outputSize;
-
-      // console.log(totalFees);
-      
-      // for (let i = 0; i < unlockableUtxos.length; i++) {
-      //   const lockingBytecode = unlockableUtxos[i].unlocker.generateLockingBytecode()
-      //   const inputFee = getInputSize(lockingBytecode)
-      //   // console.log("lockingBytecode: ", lockingBytecode);
-      //   totalFees += inputFee
-      //   // console.log(`input ${i+1} size: `, inputFee);
-      // }
-
       // Build the transaction
       transactionBuilder.addInputs(unlockableUtxos);
 
-      transactionBuilder.addOutputs(txOutputs);
+      transactionBuilder
+        .addOutputs(txOutputs)
+        // .addOutputs(contractTxOutputs)
+
 
       // console.log(transactionBuilder);
-
-      // for (let i = 0; i < txOutputs.length; i++) {
-      //   const processOutput = encodeOutput(txOutputs[i])
-      //   // console.log(processOutput);
-      //   const outputSize = processOutput.byteLength;
-      //   totalFees += outputSize;
-      //   // console.log(`tx ${i+1} output size: `, outputSize)
-      // }
+      // console.log(transactionBuilder.build());
+      // console.log(transactionBuilder.build().length / 2)
 
       // console.log("total fees:", totalFees)
 
