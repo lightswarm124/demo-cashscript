@@ -10,7 +10,7 @@ import {
   aliceAddress,
   aliceTokenAddress, 
   alicePkh, 
-  alicePriv, 
+  alicePriv,
   bobAddress,
   bobTokenAddress, 
   bobPriv, 
@@ -47,7 +47,6 @@ async function run() {
       addressType: 'p2sh32' 
     }
   );
-  // console.log(contract.redeemScript);
 
   const txByteCount = getByteCount({ P2PKH: 3 }, { P2PKH: 3 })
   
@@ -56,7 +55,7 @@ async function run() {
   const txFee = Math.floor(satoshisPerByte * txByteCount)
   // console.log(txFee)
   
-  const repeatTransaction = 10;
+  const repeatTransaction = 1;
 
   for (let i = 0; i < repeatTransaction; i++) {
     try {
@@ -65,39 +64,45 @@ async function run() {
       // const chunks = sendBuffer;
       // console.log(chunks)
 
-      const contractUtxos = await demoContract.getUtxos();
+      const contractUtxos = await contract.getUtxos();
       // // console.log(contractUtxos)
-      const contractBalance = await demoContract.getBalance();
+      const contractBalance = await contract.getBalance();
       // // console.log(contractBalance)
 
       const { withToken: tokenUTXO, withoutToken: regularUTXO } = separateUtxos(contractUtxos);
-      const { collectedObjects: contractSpendUTXOs, totalSatoshis: satoshiAmount } = collectUTXOs(regularUTXO, 70000)
-      const { collectedObjects: contractTokenUTXOs, totalSatoshis: tokenSatoshi } = collectUTXOs(tokenUTXO, 500)
+      // console.log(regularUTXO)
+      const { collectedObjects: contractSpendUTXOs, totalSatoshis: satoshiAmount } = collectUTXOs(regularUTXO, 50000)
+      // console.log(satoshiAmount)
+      // const { collectedObjects: contractTokenUTXOs, totalSatoshis: tokenSatoshi } = collectUTXOs(tokenUTXO, 500)
       // console.log(contractSpendUTXOs)
       // console.log(contractTokenUTXOs)
 
       const unlockableContractUtxos = contractSpendUTXOs.map(item => ({
         ...item,
-        unlocker: demoContract.unlock.spend(
-          satoshiAmount
-        ),
+        unlocker: contract.unlock
+          .spend(alicePub, new SignatureTemplate(alicePriv))
+        // .spend(
+        //   satoshiAmount - BigInt(1000)
+        // ),
         // unlocker: demoContract.unlock.reclaim(
         //   alicePub, new SignatureTemplate(alicePriv)
         // )
       }));
 
-      const unlockableContractTokenUtxos = contractTokenUTXOs.map(item => ({
-        ...item,
-        unlocker: demoContract.unlock.reclaim(
-          // contractBalance - 155n
-          alicePub, new SignatureTemplate(alicePriv)
-        )
-      }));
+      console.log(unlockableContractUtxos)
+
+      // const unlockableContractTokenUtxos = contractTokenUTXOs.map(item => ({
+      //   ...item,
+      //   unlocker: contract.unlock.reclaim(
+      //     // contractBalance - 155n
+      //     alicePub, new SignatureTemplate(alicePriv)
+      //   )
+      // }));
 
       const contractTxOutputs = [
         { 
-          to: demoContract.address, 
-          amount: satoshiAmount, 
+          to: contract.address, 
+          amount: satoshiAmount - BigInt(500), 
           // token: {amount: tokenUTXO[0].amount, category: tokenUTXO[0].token.category} 
         },
         // { 
@@ -114,7 +119,7 @@ async function run() {
       transactionBuilder
         .addInputs(unlockableContractUtxos)
         // .addInputs(unlockableContractTokenUtxos)
-        .addOutputs(contractTxOutputs)
+        // .addOutputs(contractTxOutputs)
 
       // console.log(transactionBuilder);
       // Post "Hello World!" to memo.cash 
@@ -130,58 +135,61 @@ async function run() {
       // -------------------------------------------------
 
       // // Fetch UTXOs
-      const aliceUtxos = await provider.getUtxos(aliceAddress);
+      // const aliceUtxos = await provider.getUtxos(aliceAddress);
 
-      // Separate UTXOs into those with and without tokens
-      const { 
-        withToken, 
-        withoutToken 
-      } = separateUtxos(aliceUtxos);
+      // // Separate UTXOs into those with and without tokens
+      // const { 
+      //   withToken, 
+      //   withoutToken 
+      // } = separateUtxos(aliceUtxos);
 
-      // console.log(withToken)
+      // console.log(withoutToken)
 
-      // Collect UTXOs to meet the required amount
-      const { collectedObjects, totalSatoshis } = collectUTXOs(withoutToken, BigInt(900000));
+      // // Collect UTXOs to meet the required amount
+      // const { collectedObjects, totalSatoshis } = collectUTXOs(withoutToken, BigInt(700000));
 
-      // Calculate the send amount
-      const sendAmount = BigInt(Math.floor((
-        Number(totalSatoshis) 
-          // - txFee 
-          - 680  
-          // + 31 
-          // - opReturnSize
-        ) / 3));
-      // console.log(sendAmount)
+      // console.log(totalSatoshis)
 
-      // Prepare transaction outputs
-      const txOutputs = [
-        { 
-          to: aliceAddress, 
-          amount: sendAmount, 
-          // token: {amount: 5n, category: withToken[0].token.category} 
-        },
-        { to: aliceAddress, amount: sendAmount },
-        { to: aliceAddress, amount: sendAmount }
-      ];
+      // // Calculate the send amount
+      // const sendAmount = BigInt(Math.floor((
+      //   Number(totalSatoshis) 
+      //     // - txFee 
+      //     - 680 
+      //     // + 31 
+      //     // - opReturnSize
+      //   ) / 3));
+      // // console.log(sendAmount)
 
-      // Create a signature template for unlocking UTXOs
-      const aliceTemplate = new SignatureTemplate(alicePriv);
+      // // Prepare transaction outputs
+      // const txOutputs = [
+      //   { 
+      //     to: aliceAddress, 
+      //     amount: sendAmount, 
+      //     // token: {amount: 5n, category: withToken[0].token.category} 
+      //   },
+      //   { to: aliceAddress, amount: sendAmount },
+      //   { to: aliceAddress, amount: sendAmount }
+      // ];
 
-      // Prepare UTXOs with unlocker
-      const unlockableUtxos = collectedObjects.map(item => ({
-        ...item,
-        unlocker: aliceTemplate.unlockP2PKH()
-      }));
+      // // Create a signature template for unlocking UTXOs
+      // const aliceTemplate = new SignatureTemplate(alicePriv);
+
+      // // Prepare UTXOs with unlocker
+      // const unlockableUtxos = collectedObjects.map(item => ({
+      //   ...item,
+      //   unlocker: aliceTemplate.unlockP2PKH()
+      // }));
+
+      // console.log(unlockableUtxos);
       
-      // Build the transaction
-      transactionBuilder.addInputs(unlockableUtxos);
+      // // Build the transaction
+      // transactionBuilder.addInputs(unlockableUtxos);
 
       transactionBuilder
-        .addOutputs(txOutputs)
-        // .addOutputs(contractTxOutputs)
+        // .addOutputs(txOutputs)
+        .addOutputs(contractTxOutputs)
 
-
-      // console.log(transactionBuilder);
+      console.log(transactionBuilder);
       // console.log(transactionBuilder.build());
       // console.log(transactionBuilder.build().length / 2)
 
