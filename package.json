@@ -15,6 +15,7 @@
     "@bitauth/libauth-v3": "npm:@bitauth/libauth@^3.0.0",
     "axios": "^1.7.2",
     "bip39": "^3.1.0",
+    "bitcoinjs-lib": "^7.0.0-rc.0",
     "cashc": "^0.9.3",
     "cashscript": "^0.9.3",
     "slp-mdm": "^0.0.7"

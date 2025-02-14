@@ -1,0 +1,25 @@
+pragma cashscript ^0.9.0;
+
+// AuthGuard covenant
+// Covenant unlocked by an AuthKey NFT
+
+// Opcode count: 10 (max 201)
+// Bytesize: 48 (max 520)
+
+contract AuthGuard(
+    bytes tokenId
+) {
+    function unlockWithNft(
+        bool keepGuarded
+    ) {
+        // Check that the second input holds the AuthKey NFT
+        require(tx.inputs[1].tokenCategory == tokenId);
+        require(tx.inputs[1].tokenAmount == 0);
+
+        // if keepGuarded is false, the AuthHead can be released from the AuthGuard covenant
+        if(keepGuarded){
+            // Self preservation of AuthGuard covenant as the first output
+            require(tx.outputs[0].lockingBytecode == tx.inputs[this.activeInputIndex].lockingBytecode);
+        }
+    }
+}
