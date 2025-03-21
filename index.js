@@ -173,7 +173,7 @@ async function run() {
 
       // Fetch UTXOs
       const aliceUtxos = await provider.getUtxos(aliceAddress);
-      // console.log(aliceUtxos);
+      console.log(aliceUtxos);
 
       // Separate UTXOs into those with and without tokens
       const { withToken, withoutToken } = separateUtxos(aliceUtxos);
@@ -224,7 +224,7 @@ async function run() {
         unlocker: aliceTemplate.unlockP2PKH(),
       }));
 
-      console.log(unlockableUtxos);
+      // console.log(unlockableUtxos);
 
       // Build the transaction
       // transactionBuilder.addInputs(unlockableUtxos);
@@ -232,7 +232,7 @@ async function run() {
       // transactionBuilder.addOutputs(txOutputs);
       // .addOutputs(contractTxOutputs)
 
-      console.log(transactionBuilder);
+      // console.log(transactionBuilder);
       // console.log(transactionBuilder.build());
       // console.log(transactionBuilder.build().length / 2);
 

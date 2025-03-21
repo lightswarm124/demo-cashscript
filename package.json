@@ -5,6 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
+    "postinstall": "patch-package",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -19,5 +20,8 @@
     "cashc": "^0.9.3",
     "cashscript": "^0.9.3",
     "slp-mdm": "^0.0.7"
+  },
+  "devDependencies": {
+    "patch-package": "^8.0.0"
   }
 }
