@@ -1,0 +1,79 @@
+{
+  "contractName": "GarbledCircuitVerifier",
+  "constructorInputs": [
+    {
+      "name": "committedRootHash",
+      "type": "bytes32"
+    },
+    {
+      "name": "knownFraudHash",
+      "type": "bytes32"
+    },
+    {
+      "name": "operatorPkh",
+      "type": "bytes20"
+    }
+  ],
+  "abi": [
+    {
+      "name": "assertResult",
+      "inputs": [
+        {
+          "name": "preimage",
+          "type": "bytes"
+        },
+        {
+          "name": "operatorPk",
+          "type": "pubkey"
+        },
+        {
+          "name": "operatorSig",
+          "type": "sig"
+        }
+      ]
+    },
+    {
+      "name": "proveFraud",
+      "inputs": [
+        {
+          "name": "preimage",
+          "type": "bytes"
+        }
+      ]
+    }
+  ],
+  "bytecode": "OP_3 OP_PICK OP_0 OP_NUMEQUAL OP_IF OP_4 OP_ROLL OP_HASH256 OP_EQUALVERIFY OP_3 OP_PICK OP_HASH160 OP_ROT OP_EQUALVERIFY OP_2SWAP OP_CHECKSIG OP_NIP OP_NIP OP_ELSE OP_3 OP_ROLL OP_1 OP_NUMEQUALVERIFY OP_3 OP_PICK OP_HASH256 OP_ROT OP_EQUALVERIFY OP_ROT OP_HASH256 OP_EQUAL OP_NOT OP_NIP OP_ENDIF",
+  "source": "pragma cashscript ^0.10.0;\r\n\r\n// Committed SNARK verifier output hash (garbled circuit root)\r\n// Optional: hash of known invalid output for fraud detection\r\ncontract GarbledCircuitVerifier(bytes32 committedRootHash, bytes32 knownFraudHash, bytes20 operatorPkh) {\r\n\r\n    // Operator asserts valid proof result by revealing preimage of committedRootHash\r\n    function assertResult(bytes preimage, pubkey operatorPk, sig operatorSig) {\r\n        // Require that the hash of the provided preimage equals the committed root hash\r\n        require(hash256(preimage) == committedRootHash);\r\n\r\n        // Require that the transaction is signed by the operator\r\n        require(hash160(operatorPk) == operatorPkh);\r\n        require(checkSig(operatorSig, operatorPk));\r\n    }\r\n\r\n    // Watchtower or user proves fraud by showing preimage of known fraudulent output\r\n    function proveFraud(bytes preimage) {\r\n        // Require that the hash of preimage matches the known fraudulent output\r\n        require(hash256(preimage) == knownFraudHash);\r\n\r\n        // Require that it does *not* match the committed root hash\r\n        require(hash256(preimage) != committedRootHash);\r\n    }\r\n}\r\n",
+  "debug": {
+    "bytecode": "5379009c63547aaa517a87695379a9527a8769537a537aac777767537a519c695379aa527a8769527aaa517a87917768",
+    "sourceMap": "8:4:15:5;;;;;10:24:10:32;;:16::33:1;:37::54:0;;:16:::1;:8::56;13:24:13:34:0;;:16::35:1;:39::50:0;;:16:::1;:8::52;14:25:14:36:0;;:38::48;;:16::49:1;8:4:15:5;;;18::24::0;;;;;20:24:20:32;;:16::33:1;:37::51:0;;:16:::1;:8::53;23:24:23:32:0;;:16::33:1;:37::54:0;;:16:::1;;18:4:24:5;5:0:25:1",
+    "logs": [],
+    "requires": [
+      {
+        "ip": 14,
+        "line": 10
+      },
+      {
+        "ip": 21,
+        "line": 13
+      },
+      {
+        "ip": 27,
+        "line": 14
+      },
+      {
+        "ip": 41,
+        "line": 20
+      },
+      {
+        "ip": 49,
+        "line": 23
+      }
+    ]
+  },
+  "compiler": {
+    "name": "cashc",
+    "version": "0.10.5"
+  },
+  "updatedAt": "2025-06-04T23:19:54.496Z"
+}

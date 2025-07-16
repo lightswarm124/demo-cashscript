@@ -1,0 +1,19 @@
+pragma cashscript ^0.11.0;
+
+contract MSVault(
+    datasig ownerPWSig, 
+    int lockTime, 
+    bytes20 pkh1, 
+    bytes20 pkh2
+) {
+    function spend(pubkey ownerPk, sig ownerSig, bytes password) {
+        require(checkDataSig(ownerPWSig, password, ownerPk));
+        require(checkSig(ownerSig, ownerPk));
+    }
+
+    function unlockVault(pubkey pk, sig s) {
+        require(tx.time >= lockTime);
+        require(hash160(pk) == pkh1 || hash160(pk) == pkh2);
+        require(checkSig(s, pk));
+    }
+}

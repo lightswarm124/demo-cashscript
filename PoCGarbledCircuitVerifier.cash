@@ -1,0 +1,25 @@
+pragma cashscript ^0.10.0;
+
+// Committed SNARK verifier output hash (garbled circuit root)
+// Optional: hash of known invalid output for fraud detection
+contract GarbledCircuitVerifier(bytes32 committedRootHash, bytes32 knownFraudHash, bytes20 operatorPkh) {
+
+    // Operator asserts valid proof result by revealing preimage of committedRootHash
+    function assertResult(bytes preimage, pubkey operatorPk, sig operatorSig) {
+        // Require that the hash of the provided preimage equals the committed root hash
+        require(hash256(preimage) == committedRootHash);
+
+        // Require that the transaction is signed by the operator
+        require(hash160(operatorPk) == operatorPkh);
+        require(checkSig(operatorSig, operatorPk));
+    }
+
+    // Watchtower or user proves fraud by showing preimage of known fraudulent output
+    function proveFraud(bytes preimage) {
+        // Require that the hash of preimage matches the known fraudulent output
+        require(hash256(preimage) == knownFraudHash);
+
+        // Require that it does *not* match the committed root hash
+        require(hash256(preimage) != committedRootHash);
+    }
+}
