@@ -6,21 +6,47 @@ import {
   SignatureTemplate,
 } from "cashscript";
 import { compileFile } from "cashc";
+<<<<<<< HEAD
+=======
+import * as bitcoin from "bitcoinjs-lib";
+>>>>>>> 9708f1e0bc5252dd1f5ecf2b84760ef45501eb81
 import {
   aliceAddress,
   aliceTokenAddress,
   alicePkh,
   alicePriv,
+<<<<<<< HEAD
   bobAddress,
   bobTokenAddress,
   bobPriv,
   alicePub,
+=======
+  aliceNode,
+  aliceWIF,
+  bobAddress,
+  bobTokenAddress,
+  bobPriv,
+  bobPkh,
+  alicePub,
+  rootNode,
+  seed,
+  bobPub,
+  bobWIF,
+  carolAddress,
+  carolTokenAddress,
+  carolPkh,
+  carolPriv,
+  carolPub,
+  carolWIF,
+  aliceBech32,
+>>>>>>> 9708f1e0bc5252dd1f5ecf2b84760ef45501eb81
 } from "./common.js";
 import { URL } from "url";
 import { encodeOutput, getInputSize } from "cashscript/dist/utils.js";
 
 import slpMdm from "slp-mdm";
 
+<<<<<<< HEAD
 function hexString(byteArray) {
   return Array.from(byteArray, (byte) =>
     byte.toString(16).padStart(2, "0")
@@ -42,29 +68,83 @@ async function run() {
     provider: provider,
     addressType: "p2sh32",
   });
+=======
+const btc = bitcoin.payments.p2wpkh({
+  pubkey: alicePub,
+  network: bitcoin.networks.bitcoin,
+});
+
+const hexString = (pkh) => {
+  return Array.from(pkh, (byte) => byte.toString(16).padStart(2, "0")).join("");
+};
+
+async function run() {
+  // console.log("BTC: ", btc.address);
+  // console.log("Seed: ", seed);
+  // console.log("Root Node: ", rootNode);
+  // console.log("Alice Node: ", aliceNode);
+  // console.log("Address: ", aliceAddress);
+  // console.log(hexString(alicePkh));
+  // console.log(hexString(alicePub));
+  // console.log(aliceWIF);
+  // console.log(hexString(alicePriv));
+  // console.log("Address: ", bobAddress);
+  // console.log(hexString(bobPkh));
+  // console.log(hexString(bobPub));
+  // console.log(bobWIF);
+  // console.log(hexString(bobPriv));
+  // console.log("Address: ", carolAddress);
+  // console.log(hexString(carolPkh));
+  // console.log(hexString(carolPub));
+  // console.log(carolWIF);
+  // console.log("Public Key: ", alicePub);
+  // console.log("Public Key Hash: ", bobPkh);
+  // console.log("Private Key WIF: ", aliceWIF);
+  // console.log("Private Key: ", alicePriv);
+  // const artifact = compileFile(new URL("p2pkh.cash", import.meta.url));
+  const artifact = compileFile(new URL("announcement.cash", import.meta.url));
+  const demoArtifact = compileFile(new URL("p2pkh.cash", import.meta.url));
+
+  const provider = new ElectrumNetworkProvider(Network.CHIPNET);
+
+  // const contract = new Contract(artifact, [alicePkh], {
+  // const contract = new Contract(artifact, [], {
+  //   provider: provider,
+  //   addressType: "p2sh32",
+  // });
+>>>>>>> 9708f1e0bc5252dd1f5ecf2b84760ef45501eb81
 
   const demoContract = new Contract(demoArtifact, [alicePkh], {
     provider: provider,
     addressType: "p2sh32",
   });
 
+<<<<<<< HEAD
   const txByteCount = getByteCount({ P2PKH: 3 }, { P2PKH: 3 });
+=======
+  const txByteCount = getByteCount({ P2PKH: 1 }, { P2PKH: 2 });
+>>>>>>> 9708f1e0bc5252dd1f5ecf2b84760ef45501eb81
 
   // console.log(txByteCount);
 
   const txFee = Math.floor(satoshisPerByte * txByteCount);
+<<<<<<< HEAD
   // console.log(txFee)
+=======
+  // console.log(txFee);
+>>>>>>> 9708f1e0bc5252dd1f5ecf2b84760ef45501eb81
 
   const repeatTransaction = 1;
 
   for (let i = 0; i < repeatTransaction; i++) {
     try {
-      let totalFees = 0;
+      // let totalFees = 0;
 
       // const chunks = sendBuffer;
       // console.log(chunks)
 
       // const contractUtxos = await contract.getUtxos();
+<<<<<<< HEAD
       // // // console.log(contractUtxos)
       // const contractBalance = await contract.getBalance();
       // // // console.log(contractBalance)
@@ -82,6 +162,35 @@ async function run() {
       // // console.log(contractTokenUTXOs)
 
       // const unlockableContractUtxos = contractSpendUTXOs.map((item) => ({
+=======
+      // // console.log(contractUtxos)
+      // const contractBalance = await contract.getBalance();
+      // // console.log(contractBalance)
+
+      // const { withToken: tokenUTXO, withoutToken: regularUTXO } = separateUtxos(contractUtxos);
+      // console.log(regularUTXO)
+      // const { collectedObjects: contractSpendUTXOs, totalSatoshis: satoshiAmount } = collectUTXOs(regularUTXO, 50000)
+      // console.log(satoshiAmount)
+      // const { collectedObjects: contractTokenUTXOs, totalSatoshis: tokenSatoshi } = collectUTXOs(tokenUTXO, 500)
+      // console.log(contractSpendUTXOs)
+      // console.log(contractTokenUTXOs)
+
+      // const unlockableContractUtxos = contractSpendUTXOs.map(item => ({
+      //   ...item,
+      //   unlocker: contract.unlock
+      //     .spend(alicePub, new SignatureTemplate(alicePriv))
+      //   // .spend(
+      //   //   satoshiAmount - BigInt(1000)
+      //   // ),
+      //   // unlocker: demoContract.unlock.reclaim(
+      //   //   alicePub, new SignatureTemplate(alicePriv)
+      //   // )
+      // }));
+
+      // console.log(unlockableContractUtxos)
+
+      // const unlockableContractTokenUtxos = contractTokenUTXOs.map(item => ({
+>>>>>>> 9708f1e0bc5252dd1f5ecf2b84760ef45501eb81
       //   ...item,
       //   unlocker: contract.unlock.spend(
       //     alicePub,
@@ -95,7 +204,24 @@ async function run() {
       //   // )
       // }));
 
+<<<<<<< HEAD
       // // console.log(unlockableContractUtxos);
+=======
+      // const contractTxOutputs = [
+      //   {
+      //     to: contract.address,
+      //     amount: satoshiAmount - BigInt(500),
+      //     // token: {amount: tokenUTXO[0].amount, category: tokenUTXO[0].token.category}
+      //   },
+      //   // {
+      //   //   to: demoContract.tokenAddress,
+      //   //   amount: tokenUTXO[0].satoshis,
+      //   //   token: {amount: tokenUTXO[0].amount, category: tokenUTXO[0].token.category}
+      //   // },
+      //   // { to: demoContract.address, amount: satoshiAmount - 524n },
+      //   // { to: aliceAddress, amount: sendAmount }
+      // ];
+>>>>>>> 9708f1e0bc5252dd1f5ecf2b84760ef45501eb81
 
       // // const unlockableContractTokenUtxos = contractTokenUTXOs.map(item => ({
       // //   ...item,
@@ -105,6 +231,7 @@ async function run() {
       // //   )
       // // }));
 
+<<<<<<< HEAD
       // const contractTxOutputs = [
       //   {
       //     to: contract.address,
@@ -128,6 +255,15 @@ async function run() {
 
       // console.log(transactionBuilder);
       // Post "Hello World!" to memo.cash
+=======
+      // transactionBuilder
+      //   .addInputs(unlockableContractUtxos)
+      //   .addInputs(unlockableContractTokenUtxos)
+      //   .addOutputs(contractTxOutputs)
+
+      // console.log(transactionBuilder);
+      // // Post "Hello World!" to memo.cash
+>>>>>>> 9708f1e0bc5252dd1f5ecf2b84760ef45501eb81
       // transactionBuilder.addOpReturnOutput(chunks);
       // transactionBuilder.addOpReturnOutput(['0x6d02', `Test Tx Chain: ${i+1}`]);
       // console.log(transactionBuilder.outputs[0]);
@@ -139,22 +275,35 @@ async function run() {
 
       // -------------------------------------------------
 
-      // // Fetch UTXOs
-      // const aliceUtxos = await provider.getUtxos(aliceAddress);
+      // Fetch UTXOs
+      const aliceUtxos = await provider.getUtxos(aliceAddress);
+      console.log(aliceUtxos);
 
+<<<<<<< HEAD
       // // Separate UTXOs into those with and without tokens
       // const {
       //   withToken,
       //   withoutToken
       // } = separateUtxos(aliceUtxos);
+=======
+      // Separate UTXOs into those with and without tokens
+      const { withToken, withoutToken } = separateUtxos(aliceUtxos);
+>>>>>>> 9708f1e0bc5252dd1f5ecf2b84760ef45501eb81
 
-      // console.log(withoutToken)
+      // console.log(withToken);
 
-      // // Collect UTXOs to meet the required amount
-      // const { collectedObjects, totalSatoshis } = collectUTXOs(withoutToken, BigInt(700000));
+      // Collect UTXOs to meet the required amount
+      const { collectedObjects, totalSatoshis } = collectUTXOs(
+        withoutToken,
+        BigInt(30000),
+        BigInt(500001)
+      );
+
+      // console.log(collectedObjects);
 
       // console.log(totalSatoshis)
 
+<<<<<<< HEAD
       // // Calculate the send amount
       // const sendAmount = BigInt(Math.floor((
       //   Number(totalSatoshis)
@@ -175,18 +324,44 @@ async function run() {
       //   { to: aliceAddress, amount: sendAmount },
       //   { to: aliceAddress, amount: sendAmount }
       // ];
+=======
+      // Calculate the send amount
+      const sendAmount = BigInt(
+        Math.floor(
+          Number(totalSatoshis) - txFee - 50000 - 50
+          // - 680
+          // + 31
+          // - opReturnSize
+          //  / 2
+        )
+      );
+      // console.log(sendAmount)
 
-      // // Create a signature template for unlocking UTXOs
-      // const aliceTemplate = new SignatureTemplate(alicePriv);
+      // Prepare transaction outputs
+      const txOutputs = [
+        {
+          to: demoContract.address,
+          amount: 50000n,
+          // token: { amount: 1n, category: withToken[0].token.category },
+        },
+        { to: aliceAddress, amount: sendAmount },
+        // { to: aliceAddress, amount: sendAmount }
+      ];
+>>>>>>> 9708f1e0bc5252dd1f5ecf2b84760ef45501eb81
 
-      // // Prepare UTXOs with unlocker
-      // const unlockableUtxos = collectedObjects.map(item => ({
-      //   ...item,
-      //   unlocker: aliceTemplate.unlockP2PKH()
-      // }));
+      // Create a signature template for unlocking UTXOs
+      const aliceTemplate = new SignatureTemplate(alicePriv);
+      // console.log("Alice Template:", aliceTemplate);
+
+      // Prepare UTXOs with unlocker
+      const unlockableUtxos = collectedObjects.map((item) => ({
+        ...item,
+        unlocker: aliceTemplate.unlockP2PKH(),
+      }));
 
       // console.log(unlockableUtxos);
 
+<<<<<<< HEAD
       // // Build the transaction
       // transactionBuilder.addInputs(unlockableUtxos);
 
@@ -197,6 +372,17 @@ async function run() {
       // console.log(transactionBuilder);
       // // console.log(transactionBuilder.build());
       // // console.log(transactionBuilder.build().length / 2)
+=======
+      // Build the transaction
+      // transactionBuilder.addInputs(unlockableUtxos);
+
+      // transactionBuilder.addOutputs(txOutputs);
+      // .addOutputs(contractTxOutputs)
+
+      // console.log(transactionBuilder);
+      // console.log(transactionBuilder.build());
+      // console.log(transactionBuilder.build().length / 2);
+>>>>>>> 9708f1e0bc5252dd1f5ecf2b84760ef45501eb81
 
       // // console.log("total fees:", totalFees)
 
@@ -212,33 +398,16 @@ async function run() {
   }
 }
 
-const calculateTotalInputFees = (inputs) => {
-  let totalFees = 0;
-  for (let i = 0; i < inputs.length; i++) {
-    const lockingBytecode = inputs[i].unlocker.generateLockingBytecode();
-    // console.log(lockingBytecode)
-    const inputFee = getInputSize(lockingBytecode);
-    totalFees += inputFee;
-  }
-  return totalFees;
-};
-
-const calculateTotalOutputFees = (outputs) => {
-  let totalFees = 0;
-  for (let i = 0; i < outputs.length; i++) {
-    const processOutput = encodeOutput(outputs[i]);
-    const outputSize = processOutput.byteLength;
-    totalFees += outputSize;
-  }
-  return totalFees;
-};
-
 const satoshisPerByte = 1;
 
-const dust = BigInt(546);
+// const dust = BigInt(546);
 
+<<<<<<< HEAD
 const token_id =
   "cea2a4e73195369cb7926441d0c9de7ee3b41cb522df1ec66f06b80dd3c61d24";
+=======
+// const token_id = "cea2a4e73195369cb7926441d0c9de7ee3b41cb522df1ec66f06b80dd3c61d24"
+>>>>>>> 9708f1e0bc5252dd1f5ecf2b84760ef45501eb81
 
 const getByteCount = (inputs, outputs) => {
   // from https://github.com/bitcoinjs/bitcoinjs-lib/issues/921#issuecomment-354394004
@@ -307,13 +476,19 @@ const separateUtxos = (arr) => {
   return { withToken, withoutToken };
 };
 
-const collectUTXOs = (arr, requestedAmount) => {
+const collectUTXOs = (arr, requestedAmount, limitAmount) => {
   let totalSatoshis = 0n;
   const collectedObjects = [];
 
+  // console.log(arr);
+
   for (const item of arr) {
-    collectedObjects.push(item);
-    totalSatoshis += item.satoshis;
+    // Only add item if its satoshis are less than the limitAmount
+    if (item.satoshis < limitAmount) {
+      collectedObjects.push(item);
+      totalSatoshis += item.satoshis;
+    }
+
     if (totalSatoshis >= requestedAmount) {
       return { collectedObjects, totalSatoshis };
     }
@@ -324,6 +499,7 @@ const collectUTXOs = (arr, requestedAmount) => {
   );
 };
 
+<<<<<<< HEAD
 const genesisBuffer = slpMdm.TokenType1.genesis(
   "TEST", // symbol
   "TESTING", // name
@@ -350,4 +526,6 @@ const sendBuffer = slpMdm.TokenType1.send(
   .split("\0")
   .filter(Boolean);
 
+=======
+>>>>>>> 9708f1e0bc5252dd1f5ecf2b84760ef45501eb81
 run();

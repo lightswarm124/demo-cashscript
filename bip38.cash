@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 pragma cashscript ^0.11.0;
+=======
+pragma cashscript ^0.9.0;
+>>>>>>> 9708f1e0bc5252dd1f5ecf2b84760ef45501eb81
 
 contract Bip38(datasig userPWSig) {
   function spend(pubkey ownerPk, sig ownerSig, bytes password) {
