@@ -45,25 +45,25 @@ async function run(password) {
         addressType: "p2sh32",
     });
 
-    // console.log(contract.address)
+    console.log(contract.address)
 
-    const balance = await contract.getBalance()
-    // console.log(balance)
-    const utxos = await contract.getUtxos()
-    console.log(utxos)
-    const currentBlockHeight = await provider.getBlockHeight()
+    // const balance = await contract.getBalance()
+    // // console.log(balance)
+    // const utxos = await contract.getUtxos()
+    // console.log(utxos)
+    // const currentBlockHeight = await provider.getBlockHeight()
 
-    const txBuilder = new TransactionBuilder({ provider })
-    // txBuilder.addInputs(utxos, contract.unlock.spend(alicePub, new SignatureTemplate(alicePriv), oracleMessage))
-    txBuilder.addInputs(utxos, contract.unlock.unlockVault(bobPub, new SignatureTemplate(bobPriv)))
-    txBuilder.setLocktime(currentBlockHeight)
-    txBuilder.addOutput({
-        amount: balance - 500n,
-        to: aliceAddress
-    })  
+    // const txBuilder = new TransactionBuilder({ provider })
+    // // txBuilder.addInputs(utxos, contract.unlock.spend(alicePub, new SignatureTemplate(alicePriv), oracleMessage))
+    // txBuilder.addInputs(utxos, contract.unlock.unlockVault(bobPub, new SignatureTemplate(bobPriv)))
+    // txBuilder.setLocktime(currentBlockHeight)
+    // txBuilder.addOutput({
+    //     amount: balance - 500n,
+    //     to: aliceAddress
+    // })  
 
-    const tx = await txBuilder.send()
-    console.log(tx.txid)
+    // const tx = await txBuilder.send()
+    // console.log(tx.txid)
 }
 
 run("password")
