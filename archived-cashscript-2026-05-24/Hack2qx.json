@@ -1,0 +1,28 @@
+{
+  "contractName": "Hack2qx",
+  "constructorInputs": [],
+  "abi": [
+    {
+      "name": "makePayment",
+      "inputs": []
+    }
+  ],
+  "bytecode": "OP_0 OP_OUTPUTBYTECODE 76a9143ada409596ff14e9980aaba6f3f0c99f5306a77088ac OP_EQUAL",
+  "source": "pragma cashscript ^0.11.0;\r\n\r\n\r\ncontract Hack2qx() {\r\n\r\n    // Require a utxo be paid to 2qx#72497; 🦇 \r\n    // at bitcoincash:qqad5sy4jml3f6vcp246dulsex04xp48wq23d35rqe\r\n    // ... or does it really requrie that? \r\n    function makePayment() {\r\n          require(tx.outputs[0].lockingBytecode \r\n          == \r\n          0x76a9143ada409596ff14e9980aaba6f3f0c99f5306a77088ac\r\n          );\r\n    }\r\n}",
+  "debug": {
+    "bytecode": "00cd1976a9143ada409596ff14e9980aaba6f3f0c99f5306a77088ac87",
+    "sourceMap": "10:29:10:30;:18::47:1;12:10:12:62:0;10::13:12:1",
+    "logs": [],
+    "requires": [
+      {
+        "ip": 4,
+        "line": 10
+      }
+    ]
+  },
+  "compiler": {
+    "name": "cashc",
+    "version": "0.11.1"
+  },
+  "updatedAt": "2025-07-16T16:31:03.085Z"
+}

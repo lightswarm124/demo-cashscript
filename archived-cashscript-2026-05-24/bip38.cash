@@ -1,0 +1,8 @@
+pragma cashscript ^0.11.0;
+
+contract BIP38(datasig ownerPWSig) {
+    function spend(pubkey ownerPk, sig ownerSig, bytes password) {
+        require(checkDataSig(ownerPWSig, password, ownerPk));
+        require(checkSig(ownerSig, ownerPk));
+    }
+}

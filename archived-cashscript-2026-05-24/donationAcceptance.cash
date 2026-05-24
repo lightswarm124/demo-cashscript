@@ -1,0 +1,141 @@
+// DonationAcceptance.cash
+pragma cashscript ^0.11.0;
+
+/**
+ * @file DonationAcceptance.cash
+ * @overview
+ * Enforces compliant political donations using CashTokens + an oracle:
+ *  - Donor must present a valid Permit NFT and receive it back (non-custodial identity).
+ *  - Donor must burn Quota FT units sufficient to cover the fiat value of the BCH donation.
+ *  - Oracle message (price & timestamp) must be signed by the configured oracle key.
+ *  - Entire BCH amount (minus fixed fee) is forwarded to a campaign Vault (P2SH32).
+ *
+ * @security
+ * - Time rule: only `tx.time >= oracleTimestamp` is enforced on-chain to avoid disallowed "<=" patterns.
+ *   Freshness/TTL is enforced off-chain by refusing to sign stale oracle messages.
+ * - Fixed-fee pattern is used to simplify equality checks; set fee conservatively.
+ * - Input/output indices are fixed to avoid loops and keep the covenant simple to audit.
+ *
+ * @dev
+ * Layout (fixed):
+ *  inputs:
+ *    [0] this contract UTXO
+ *    [1] donor Permit NFT UTXO (must be returned in output[1])
+ *    [2] donor Quota FT UTXO (burned; no outputs may carry the same FT category)
+ *  outputs:
+ *    [0] P2SH32 to VAULT_SCRIPT_HASH_P2SH32 with full BCH less fee
+ *    [1] return of the SAME Permit NFT to donor's locking bytecode
+ */
+
+contract DonationAcceptance(
+  /**
+   * @param PERMIT_CATEGORY 32-byte CashToken category for the donor Permit NFT (immutable).
+   */
+  bytes32 PERMIT_CATEGORY,
+
+  /**
+   * @param QUOTA_CATEGORY 32-byte CashToken category for the donor Quota FT (fungible units).
+   *                       Units should map to fiat cents off-chain (e.g., 1 unit = 1 cent).
+   */
+  bytes32 QUOTA_CATEGORY,
+
+  /**
+   * @param VAULT_SCRIPT_HASH_P2SH32 32-byte script hash of the campaign Vault lock (P2SH32).
+   *                                 All accepted BCH is forwarded here.
+   */
+  bytes32 VAULT_SCRIPT_HASH_P2SH32,
+
+  /**
+   * @param ORACLE_PUBKEY Oracle public key used with checkDataSig to validate price messages.
+   */
+  pubkey  ORACLE_PUBKEY,
+
+  /**
+   * @param ORACLE_TTL_SECONDS Intended quote freshness window (seconds). Not enforced on-chain
+   *                           (no "<=" with tx.time); enforce off-chain by refusing stale signatures.
+   */
+  int     ORACLE_TTL_SECONDS,
+
+  /**
+   * @param QUOTA_CENTS_PER_UNIT Conversion for Quota FT units to fiat cents (e.g., 1).
+   */
+  int     QUOTA_CENTS_PER_UNIT
+) {
+  /**
+   * @function accept
+   * @description Accepts a donation by verifying a signed oracle price, burning sufficient
+   *              Quota FT units, returning the donor Permit NFT, and forwarding BCH to the Vault.
+   *
+   * @param oracleSig  Oracle signature over `oracleMsg` (see layout below).
+   * @param oracleMsg  24 bytes: [8 bytes priceNumer][8 bytes priceDenom][8 bytes timestamp].
+   *
+   * @requirements
+   *  - Input/Output positions follow the fixed layout described in the file header.
+   *  - Oracle signature must validate with `ORACLE_PUBKEY`.
+   *  - `tx.time >= oracleTimestamp` (block timestamp must be after oracle message time).
+   *  - Quota FT burned units >= required units computed from donation sats & oracle price.
+   */
+  function accept(datasig oracleSig, bytes oracleMsg /* 24 bytes */) {
+    // [0] this covenant
+    // [1] donor Permit NFT
+    // [2] donor Quota FT
+    require(this.activeInputIndex == 0);
+
+    // (1) Forward all BCH (minus a fixed fee) to the Vault at output[0]
+    int minerFee = 1000; // tune conservatively in your tx builder
+    int donationSats = tx.inputs[0].value - minerFee;
+
+    bytes35 vaultLock = new LockingBytecodeP2SH32(VAULT_SCRIPT_HASH_P2SH32);
+    require(tx.outputs.length == 2);
+    require(tx.outputs[0].lockingBytecode == vaultLock);
+    require(tx.outputs[0].value == donationSats);
+
+    // (2) Permit NFT must be presented at input[1] and returned at output[1]
+    bytes in1Cat = tx.inputs[1].tokenCategory;
+    require(in1Cat.split(32)[0] == PERMIT_CATEGORY);
+    bytes in1Commit = tx.inputs[1].nftCommitment; // proof of identity metadata (opaque here)
+    require(in1Commit.length > 0);
+
+    // Return to same locking bytecode & same NFT (category + commitment)
+    require(tx.outputs[1].lockingBytecode == tx.inputs[1].lockingBytecode);
+    bytes out1Cat = tx.outputs[1].tokenCategory;
+    require(out1Cat.split(32)[0] == PERMIT_CATEGORY);
+    require(tx.outputs[1].nftCommitment == in1Commit);
+
+    // (3) Quota FT burn: input[2] provides QUOTA_CATEGORY FT; no output may carry it
+    bytes in2Cat = tx.inputs[2].tokenCategory;
+    require(in2Cat.split(32)[0] == QUOTA_CATEGORY);
+    int quotaIn  = tx.inputs[2].tokenAmount;
+
+    // PoC: exactly 2 outputs; neither may carry Quota FT
+    require(tx.outputs[0].tokenCategory.split(32)[0] != QUOTA_CATEGORY);
+    require(tx.outputs[1].tokenCategory.split(32)[0] != QUOTA_CATEGORY);
+
+    // (4) Oracle message verification and parsing
+    require(checkDataSig(oracleSig, oracleMsg, ORACLE_PUBKEY));
+    require(oracleMsg.length == 24); // [8][8][8]
+
+    bytes pn, bytes rest = oracleMsg.split(8);
+    bytes pd, bytes tsb  = rest.split(8);
+
+    int priceNumer = int(pn);  // USD per BCH numerator
+    int priceDenom = int(pd);  // USD per BCH denominator
+    int ts         = int(tsb); // oracle timestamp (unix seconds)
+
+    // Time rule: only ensure tx is not older than the oracle message
+    require(tx.time >= ts);
+    // NOTE: TTL upper bound intentionally enforced off-chain by the oracle service.
+
+    // (5) Compute required burn from BCH donation value
+    // USDc = (sats / 1e8) * price * 100 = (sats * priceNumer * 100) / (1e8 * priceDenom)
+    int ONE_E8 = 100_000_000;
+    int usdCents = (donationSats * priceNumer * 100) / (ONE_E8 * priceDenom);
+
+    // ceil(usdCents / QUOTA_CENTS_PER_UNIT)
+    int neededUnits = (usdCents + (QUOTA_CENTS_PER_UNIT - 1)) / QUOTA_CENTS_PER_UNIT;
+
+    // Burned units = input2 amount (since no outputs carry QUOTA_CATEGORY in this PoC)
+    int burnedUnits = quotaIn;
+    require(burnedUnits >= neededUnits);
+  }
+}

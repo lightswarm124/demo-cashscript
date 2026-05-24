@@ -1,0 +1,124 @@
+// CampaignVault.cash
+pragma cashscript ^0.11.0;
+
+/**
+ * @file CampaignVault.cash
+ * @overview
+ * Campaign treasury covenant that enforces controlled spending:
+ *  - Pays only to authorized vendors (VendorAuth NFT must transfer input[1] → output[0]).
+ *  - Applies a per-epoch spending cap using a mutable Vault Identity NFT commitment.
+ *  - Returns remaining funds/state to the same contract with the updated commitment.
+ *
+ * @dev
+ * Layout (fixed):
+ *  inputs:
+ *    [0] vault UTXO (holds VAULT_ID NFT with 16-byte commitment [epoch|spent])
+ *    [1] vendor-auth UTXO (holds VENDOR_AUTH NFT with vendorId commitment)
+ *  outputs:
+ *    [0] vendor payment (receives SAME VENDOR_AUTH NFT; proves whitelisted vendor)
+ *    [1] return-to-vault (same locking bytecode; VAULT_ID NFT with updated commitment)
+ *
+ * Commitment format:
+ *   VAULT_ID.nftCommitment = 16 bytes: [8 bytes epochIndex][8 bytes spentThisEpochSats]
+ *
+ * @security
+ * - No unsupported `tx.time`/`tx.age` comparisons; epoch index is derived from `tx.locktime / EPOCH_SECONDS`.
+ * - Fixed-fee equality (`currentValue == vendorValue + changeValue + minerFee`) keeps accounting strict.
+ * - Matching category & commitment for VENDOR_AUTH across in[1] → out[0] prevents spoofed authorization.
+ */
+
+contract CampaignVault(
+  /**
+   * @param VAULT_ID_CATEGORY 32-byte category for the identity NFT tracking epoch & spent state.
+   */
+  bytes32 VAULT_ID_CATEGORY,
+
+  /**
+   * @param VENDOR_AUTH_CATEGORY 32-byte category for vendor authorization NFTs.
+   *                              Each vendor gets a distinct `nftCommitment` (vendorId).
+   */
+  bytes32 VENDOR_AUTH_CATEGORY,
+
+  /**
+   * @param EPOCH_SECONDS Epoch length in seconds (e.g., 86_400 for daily caps).
+   */
+  int     EPOCH_SECONDS,
+
+  /**
+   * @param EPOCH_CAP_SATS Maximum satoshis spendable in a single epoch.
+   */
+  int     EPOCH_CAP_SATS
+) {
+  /**
+   * @function payVendor
+   * @description Pays an authorized vendor and updates the vault’s epoch spend.
+   *
+   * @requirements
+   *  - in[0] must carry VAULT_ID NFT with 16-byte commitment [epoch|spent].
+   *  - in[1] must carry VENDOR_AUTH NFT (non-empty commitment == vendorId).
+   *  - out[0] must receive the SAME VENDOR_AUTH NFT (category + commitment).
+   *  - out[1] must return to this contract with the VAULT_ID NFT whose commitment is updated.
+   *  - Fixed fee model: inputs[0].value == outputs[0].value + outputs[1].value + minerFee.
+   *  - newSpent <= EPOCH_CAP_SATS where:
+   *      carrySpent = (epochNow == prevEpoch) ? prevSpent : 0
+   *      newSpent   = carrySpent + vendorValue
+   */
+  function payVendor() {
+    // Fixed I/O layout
+    require(this.activeInputIndex == 0);
+    require(tx.outputs.length == 2);
+
+    // --- (0) Verify VAULT_ID NFT present on input[0] and parse state ---
+    bytes in0Cat = tx.inputs[0].tokenCategory;
+    require(in0Cat.split(32)[0] == VAULT_ID_CATEGORY);
+
+    bytes state = tx.inputs[0].nftCommitment; // 16 bytes: [8 epochIndex][8 spentSats]
+    require(state.length == 16);
+    bytes bEpoch, bytes bSpent = state.split(8);
+    int prevEpoch = int(bEpoch);
+    int prevSpent = int(bSpent);
+
+    // --- (1) Enforce VendorAuth transfer input[1] → output[0] ---
+    bytes in1Cat = tx.inputs[1].tokenCategory;
+    require(in1Cat.split(32)[0] == VENDOR_AUTH_CATEGORY);
+
+    bytes vendorId = tx.inputs[1].nftCommitment;  // specific vendor id (opaque)
+    require(vendorId.length > 0);
+
+    bytes out0Cat = tx.outputs[0].tokenCategory;
+    require(out0Cat.split(32)[0] == VENDOR_AUTH_CATEGORY);
+    require(tx.outputs[0].nftCommitment == vendorId);
+
+    // --- (2) Derive epoch index from locktime (timestamp recommended upstream) ---
+    int epochNow = tx.locktime / EPOCH_SECONDS;
+
+    // --- (3) Strict accounting with fixed fee ---
+    int minerFee = 1000; // tune with your tx builder
+    int currentValue = tx.inputs[0].value;
+    int vendorValue  = tx.outputs[0].value;
+    int changeValue  = tx.outputs[1].value;
+    require(currentValue == vendorValue + changeValue + minerFee);
+
+    // --- (4) Return to SAME contract (code lock) on output[1] ---
+    require(tx.outputs[1].lockingBytecode == tx.inputs[0].lockingBytecode);
+
+    // --- (5) Enforce per-epoch cap and update state commitment ---
+    int carrySpent = 0;
+    if (epochNow == prevEpoch) {
+      carrySpent = prevSpent;
+    } else {
+      carrySpent = 0;
+    }
+    int newSpent = carrySpent + vendorValue;
+    require(newSpent <= EPOCH_CAP_SATS);
+
+    // Build new commitment [epochNow|newSpent] and require it on output[1]
+    bytes8 beEpoch = bytes8(epochNow);
+    bytes8 beSpent = bytes8(newSpent);
+    bytes newState = beEpoch + beSpent;
+
+    bytes out1Cat = tx.outputs[1].tokenCategory;
+    require(out1Cat.split(32)[0] == VAULT_ID_CATEGORY);
+    require(tx.outputs[1].nftCommitment == newState);
+  }
+}
