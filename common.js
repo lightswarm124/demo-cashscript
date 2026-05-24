@@ -6,18 +6,20 @@ import {
   encodeCashAddress,
   encodePrivateKeyWif,
   encodeBech32,
-  decodeBech32,
+  deriveSeedFromBip39Mnemonic,
 } from "@bitauth/libauth";
-import bip39 from "bip39";
 
 // This is duplicated from common.ts because it is not possible to import from a .ts file in p2pkh.js
 
 // Generate entropy from BIP39 mnemonic phrase and initialise a root HD-wallet node
-export const seed = await bip39.mnemonicToSeed(
+export const seed = deriveSeedFromBip39Mnemonic(
   "talk story visual hidden behind wasp evil abandon bus brand circle sketch"
 );
-// export const seed = await bip39.mnemonicToSeed("");
-export const rootNode = deriveHdPrivateNodeFromSeed(seed, true);
+// export const seed = deriveSeedFromBip39Mnemonic("");
+export const rootNode = deriveHdPrivateNodeFromSeed(seed, {
+  assumeValidity: true,
+  throwErrors: true,
+});
 const baseDerivationPath = "m/44'/1'/0'/0";
 
 // Derive Alice's private key, public key, public key hash and address
@@ -30,12 +32,18 @@ export const aliceBech32 = encodeBech32(alicePub);
 export const alicePriv = aliceNode.privateKey;
 export const aliceWIF = encodePrivateKeyWif(alicePriv, "testnet");
 export const alicePkh = hash160(alicePub);
-export const aliceAddress = encodeCashAddress("bchtest", "p2pkh", alicePkh);
-export const aliceTokenAddress = encodeCashAddress(
-  "bchtest",
-  "p2pkhWithTokens",
-  alicePkh
-);
+export const aliceAddress = encodeCashAddress({
+  prefix: "bchtest",
+  type: "p2pkh",
+  payload: alicePkh,
+  throwErrors: true,
+}).address;
+export const aliceTokenAddress = encodeCashAddress({
+  prefix: "bchtest",
+  type: "p2pkhWithTokens",
+  payload: alicePkh,
+  throwErrors: true,
+}).address;
 
 // Derive Bob's private key, public key, public key hash and address
 const bobNode = deriveHdPath(rootNode, `${baseDerivationPath}/1`);
@@ -44,12 +52,18 @@ export const bobPub = secp256k1.derivePublicKeyCompressed(bobNode.privateKey);
 export const bobPriv = bobNode.privateKey;
 export const bobWIF = encodePrivateKeyWif(bobPriv, "testnet");
 export const bobPkh = hash160(bobPub);
-export const bobAddress = encodeCashAddress("bchtest", "p2pkh", bobPkh);
-export const bobTokenAddress = encodeCashAddress(
-  "bchtest",
-  "p2pkhWithTokens",
-  bobPkh
-);
+export const bobAddress = encodeCashAddress({
+  prefix: "bchtest",
+  type: "p2pkh",
+  payload: bobPkh,
+  throwErrors: true,
+}).address;
+export const bobTokenAddress = encodeCashAddress({
+  prefix: "bchtest",
+  type: "p2pkhWithTokens",
+  payload: bobPkh,
+  throwErrors: true,
+}).address;
 
 // Derive Carol's private key, public key, public key hash and address
 const carolNode = deriveHdPath(rootNode, `${baseDerivationPath}/2`);
@@ -60,12 +74,18 @@ export const carolPub = secp256k1.derivePublicKeyCompressed(
 export const carolPriv = carolNode.privateKey;
 export const carolWIF = encodePrivateKeyWif(carolPriv, "testnet");
 export const carolPkh = hash160(carolPub);
-export const carolAddress = encodeCashAddress("bchtest", "p2pkh", carolPkh);
-export const carolTokenAddress = encodeCashAddress(
-  "bchtest",
-  "p2pkhWithTokens",
-  carolPkh
-);
+export const carolAddress = encodeCashAddress({
+  prefix: "bchtest",
+  type: "p2pkh",
+  payload: carolPkh,
+  throwErrors: true,
+}).address;
+export const carolTokenAddress = encodeCashAddress({
+  prefix: "bchtest",
+  type: "p2pkhWithTokens",
+  payload: carolPkh,
+  throwErrors: true,
+}).address;
 
 // export const aliceAddress = encodeCashAddress({
 //   payload: alicePkh,
